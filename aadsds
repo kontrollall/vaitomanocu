@@ -1,0 +1,146 @@
+-- Load Rayfield lib
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Credits: TGMANKASKE",
+    LoadingTitle = "Carregando...",
+    LoadingSubtitle = "Por favor aguarde",
+    ConfigurationSaving = {
+        Enabled = false,
+        FolderName = nil,
+        FileName = nil,
+    },
+    Discord = {
+        Enabled = false,
+        Invite = nil,
+        RememberJoins = false,
+    },
+    KeySystem = false,
+})
+
+local Section = Window:CreateTab("Boosts", 4483362458) -- ícone qualquer
+
+local tycoonsFolder = workspace:WaitForChild("Tycoons")
+
+local morphList = {}
+local morphMap = {}
+local selectedMorphName = nil
+
+local dropdownElement = nil
+
+local canSteal = true
+
+-- Função para pegar morphs únicos e mapa name -> lista morphs
+local function getUniqueMorphs()
+    local nameToMorphs = {}
+    local uniqueNames = {}
+
+    for _, tycoon in pairs(tycoonsFolder:GetChildren()) do
+        local morphs = tycoon:FindFirstChild("Morphs")
+        if morphs then
+            for _, morph in pairs(morphs:GetChildren()) do
+                if morph:FindFirstChild("Remote") then
+                    local name = morph.Name
+                    if name and name ~= "" then
+                        if not nameToMorphs[name] then
+                            nameToMorphs[name] = {}
+                            table.insert(uniqueNames, name)
+                        end
+                        table.insert(nameToMorphs[name], morph)
+                    end
+                end
+            end
+        end
+    end
+
+    table.sort(uniqueNames)
+    return uniqueNames, nameToMorphs
+end
+
+local function listsAreDifferent(a, b)
+    if #a ~= #b then return true end
+    for i = 1, #a do
+        if a[i] ~= b[i] then return true end
+    end
+    return false
+end
+
+local function updateMorphs()
+    local newMorphList, newMorphMap = getUniqueMorphs()
+
+    if listsAreDifferent(newMorphList, morphList) then
+        morphList = newMorphList
+        morphMap = newMorphMap
+
+        if dropdownElement then
+            dropdownElement:Update(newMorphList)
+
+            if #morphList > 0 then
+                -- Confere se o selecionado ainda existe
+                local found = false
+                for _, name in ipairs(morphList) do
+                    if name == selectedMorphName then
+                        found = true
+                        break
+                    end
+                end
+                if not found then
+                    selectedMorphName = morphList[1]
+                    dropdownElement:SetValue(selectedMorphName)
+                end
+            else
+                selectedMorphName = nil
+                dropdownElement:SetValue(nil)
+            end
+        else
+            if #morphList > 0 then
+                selectedMorphName = morphList[1]
+                dropdownElement = Section:CreateDropdown({
+                    Name = "Select Morph to Steal",
+                    Options = morphList,
+                    CurrentOption = selectedMorphName,
+                    Flag = "morphDropdown",
+                    Callback = function(value)
+                        selectedMorphName = value
+                    end,
+                })
+            end
+        end
+    end
+end
+
+-- Cria botão de roubar morphs
+Section:CreateButton({
+    Name = "Steal",
+    Callback = function()
+        if not canSteal then return end
+        canSteal = false
+
+        if selectedMorphName and morphMap[selectedMorphName] then
+            for _, morph in ipairs(morphMap[selectedMorphName]) do
+                local remote = morph:FindFirstChild("Remote")
+                if remote and remote:IsA("RemoteEvent") then
+                    remote:FireServer("Stolen")
+                    print("Stealing:", selectedMorphName)
+                else
+                    warn("Remote not found for morph:", selectedMorphName)
+                end
+            end
+        else
+            warn("No morph selected or morph not found.")
+        end
+
+        wait(1)
+        canSteal = true
+        updateMorphs()
+    end,
+})
+
+-- Inicializa a lista e dropdown
+updateMorphs()
+
+-- Atualiza morphs a cada 2 segundos, sem criar dropdown novo
+while true do
+    wait(2)
+    updateMorphs()
+end
