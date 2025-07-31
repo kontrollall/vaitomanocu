@@ -26,7 +26,6 @@ local selectedMorphName = nil
 
 -- Função para pegar morphs únicos e mapa name->lista morphs
 local function getUniqueMorphs()
-    local uniqueNames = {}
     local uniqueList = {}
     local nameToMorphs = {}
 
@@ -55,7 +54,6 @@ local morphDropdown = MorphSection:CreateDropdown({
     Name = "Select Morph to Steal",
     Options = {},
     CurrentOption = nil,
-    Flag = nil,
     Callback = function(option)
         selectedMorphName = option
     end
@@ -118,7 +116,7 @@ MorphSection:CreateButton({
     end
 })
 
--- Atualiza morphs a cada 2 segundos sem spawn (uso de loop simples)
+-- Atualiza morphs a cada 2 segundos
 coroutine.wrap(function()
     while true do
         updateMorphs()
